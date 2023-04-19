@@ -1,0 +1,29 @@
+---
+title: "Cos del treball"
+author: "Arnau Sánchez Alaix"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Importació base de dades i passada a Rdata.
+
+```{r}
+library(readxl)
+bd <- read_excel("C:/Users/arnau/Desktop/TFG/COS DEL TREBALL/Proposta_Tables_GLMM_RS_Sports_Arnau.xlsx", 
+    sheet = "DEFINITIU")
+
+save(bd, file = "bd.RData")
+```
+
+
+Importació del fitxer Rdata
+
+```{r}
+setwd("C:/Users/arnau/Desktop/TFG/COS DEL TREBALL")
+load("bd.Rdata")
+```
+
