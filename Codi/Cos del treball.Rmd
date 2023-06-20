@@ -13,7 +13,7 @@ Importació base de dades i passada a Rdata.
 
 ```{r}
 library(readxl)
-bd <- read_excel("C:/Users/arnau/Desktop/TFG/COS DEL TREBALL/Proposta_Tables_GLMM_RS_Sports_Arnau.xlsx", 
+bd <- read_excel("C:/Users/arnau/Desktop/TFG/3. COS DEL TREBALL/Proposta_Tables_GLMM_RS_Sports_Arnau.xlsx", 
     sheet = "DEFINITIU")
 
 save(bd, file = "bd.RData")
@@ -23,7 +23,152 @@ save(bd, file = "bd.RData")
 Importació del fitxer Rdata
 
 ```{r}
-setwd("C:/Users/arnau/Desktop/TFG/COS DEL TREBALL")
+setwd("C:/Users/arnau/Desktop/TFG/3. COS DEL TREBALL")
 load("bd.Rdata")
+bd <- as.data.frame(bd)
 ```
+
+
+## Descriptiva inicial
+
+```{r}
+summary(bd)
+```
+
+Taules de freqüències
+```{r}
+library(ggplot2)
+library(descr)
+library(kableExtra)
+library(class)
+library(lessR)
+
+vars <- names(bd)[-c(1:2, 7:9, 15)]
+
+for(i in vars){
+  print(kable(freq(bd[,i], plot = FALSE))%>%
+    kable_styling(bootstrap_options = "bordered", stripe_color = TRUE,
+                  position = "center", full_width = TRUE)%>%
+    column_spec(1, border_right = T))
+
+}
+
+```
+
+
+### Característiques generals dels articles seleccionats
+
+
+*Gràfic de tendència per la variable any de publicació*
+
+
+Creació del data frame amb tots els anys, inclosos els que no s'ha publicat cap article
+```{r}
+any <- names(table(bd$`Publication Year`))
+freq <- as.vector(table(bd$`Publication Year`))
+
+# Crear un data frame amb totes les dades de freqüència (incloent els anys amb freqüència 0)
+data <- data.frame(Any = 2011:2023, Freq = 0)
+data[data$Any %in% any, "Freq"] <- freq
+```
+
+
+Gràfic de tendència
+```{r}
+library(ggplot2)
+
+ggplot(data, aes(x = Any, y = Freq)) +
+  geom_line(linewidth = 0.75) + 
+  geom_point(size = 1.5, color = "black") + 
+  ylim(0,8) +
+  geom_smooth(se = FALSE, size = 0.75, method = "loess") +
+  labs(x = "Any de publicació", y = "Nombre d'articles") +
+  scale_x_continuous(breaks = seq(1993, 2023, by = 1))
+```
+
+
+
+###	Característiques generals de l’esport
+
+Anàlisi bivariant de les característiques generals de l'esport
+```{r}
+vars <- names(bd)[c(12:14)] # Sport, Gender, Category participants
+
+for(i in vars){
+  print(ggplot(bd, aes(x = bd[,i], fill = `Category classification`)) +
+        geom_bar() +
+        xlab(i) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+}
+
+```
+
+El més destacat és category participants vs category classification. Es repeteix millorant i creant la categoria Other.
+
+```{r}
+# re-order levels
+reorder_size <- function(x) {
+        factor(x, levels = names(sort(table(x), decreasing = TRUE)))
+}
+
+ggplot(bd, aes(x = reorder_size(`Category participants`), fill = `Category classification`)) +
+        geom_bar() +
+        scale_fill_manual(values = c("springgreen", "dodgerblue")) +
+        labs(x='Category classification', y='Number of articles') +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+###	Característiques generals del GLMM ajustat
+
+
+Software utilitzat
+
+```{r}
+#Creació categoria Other
+
+bd[bd$`Statistical software:` == "Statistica" | bd$`Statistical software:` == "MLwiN" | bd$`Statistical software:` == "SAS, SPSS, Mathematica, S-Plus", "Statistical software:"] <- "Other"
+```
+
+```{r}
+freq <- table(bd$`Statistical software:`)
+
+# Calcular les freqüències relatives
+freq_rel <- prop.table(freq)
+
+# Crear el data frame amb les dades
+df <- data.frame(Categoria = as.factor(names(freq)),
+                 Frequencia = as.numeric(freq),
+                 Percentatge = as.numeric(freq_rel))
+
+# Ordenar el data frame de major a menor freqüència, excepte "Other" i "NR"
+df_order <- df[!(df$Categoria %in% c("Other", "NR")), ]
+df_order <- df_order[order(-df_order$Frequencia), ]
+
+# Afegir "Other" i "NR" com a últimes files del data frame
+df_grafic <- rbind(df_order, df[df$Categoria == "Other", ], df[df$Categoria == "NR", ])
+
+# Convertir la variable Categoria en un factor amb l'ordre desitjat
+df_grafic$Categoria <- factor(df_grafic$Categoria, levels = c(levels(df_grafic$Categoria)[!levels(df_grafic$Categoria) %in% c("Other", "NR")], "Other", "NR"))
+```
+
+
+```{r}
+ggplot(df_grafic, aes(x = Categoria, y = Percentatge, fill = Categoria)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste("n =", Frequencia)), vjust = -0.5) +
+  labs(x = "Software estadístic", y = "Percentatge") +
+  theme_minimal()
+```
+
+
+
+
+
+
+
+
+
+
 
